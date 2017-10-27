@@ -1,4 +1,0 @@
-LICENSE
-README.md
-resizenc.py
-test.txt
