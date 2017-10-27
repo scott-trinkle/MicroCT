@@ -3,35 +3,7 @@ from netCDF4 import Dataset
 from scipy.ndimage import zoom
 
 
-def copync(infn, outfn):
-
-    inf = Dataset(infn, "r")
-    outf = Dataset(outfn, "w", format='NETCDF3_CLASSIC')
-
-    #  Copy global attributes.
-
-    outf.setncatts(inf.__dict__)
-
-    #  Copy dimensions.
-
-    for dimname, dim in inf.dimensions.items():
-        outf.createDimension(dimname, len(dim))
-
-    #  Copy variables and variable attributes.
-
-    for varname, ncvar in inf.variables.items():
-        var = outf.createVariable(varname, ncvar.dtype, ncvar.dimensions)
-        attdict = ncvar.__dict__
-        var.setncatts(attdict)
-        var[:] = ncvar[:]
-        outf.sync()
-
-    inf.close()
-
-    return outf
-
-
-def downsample(infn, outfn):
+def downsample(infn, outfn, factors):
 
     ftype_str = infn.split('.')[-1]
 
@@ -48,9 +20,8 @@ def downsample(infn, outfn):
     new.setncatts(orig.__dict__)
 
     orig_data = orig.variables[data_str][:]
-    nz, ny, nx = 1, 5, 5
-    reductions = (1 / nz, 1 / ny, 1 / nx)
-    sampled = zoom(orig_data, reductions, order=1)
+    reductions = (1 / factors[0], 1 / factors[1], 1 / factors[2])
+    sampled = zoom(orig_data, reductions, order=0)
 
     new.createDimension('dz', sampled.shape[0])
     new.createDimension('dy', sampled.shape[1])
@@ -67,4 +38,5 @@ def downsample(infn, outfn):
 # fn = ['VS0169/' + line.strip('\n') for line in filenames]
 
 
-downsample('test.nc', 'new.nc')
+factors = (5, 3, 3)
+downsample('../test.nc', '../new.nc', factors)
