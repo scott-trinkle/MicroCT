@@ -1,7 +1,6 @@
 import netCDF4 as nc
 import numpy as np
 from libtiff import TIFF
-from glob import glob
 
 
 def get_sino_slices(fn):
