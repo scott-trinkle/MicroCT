@@ -1,7 +1,6 @@
 *~
 *.out
 __*
-sampled/
 .DS_Store
-Data
 Reference
+Data/VS0169*
