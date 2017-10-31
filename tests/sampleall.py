@@ -2,10 +2,15 @@ from downsample import downsample
 from glob import glob
 import time
 
-infilenames = glob('../VS0169/*.nc')
-infilenames.extend(glob('../VS0169/*.volume'))
+'''
+This script reads in all netCDF data from the VS0169_Full directory and downsamples it, 
+saving the results to the VS0169_Sampled directory. 
+'''
 
-outfilenames = ['sampled/sampled_133_' + line.split('/')[-1] for line in infilenames]
+infilenames = glob('../Data/VS0169_Full/*.nc')
+infilenames.extend(glob('../Data/VS0169_Full/*.volume'))
+
+outfilenames = ['../Data/VS0169_Sampled/sampled_133_' + line.split('/')[-1] for line in infilenames]
 
 for infn, outfn in zip(infilenames, outfilenames):
     start = time.time()
