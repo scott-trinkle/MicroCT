@@ -8,6 +8,7 @@ from scipy.ndimage import zoom
 from libtiff import TIFF
 import time
 
+
 def downsample(infn, outfn, factors):
     '''
     This script reads in data from a netCDF file (either .nc or .volume), 
@@ -30,7 +31,7 @@ def downsample(infn, outfn, factors):
     Example
     _______
     >> downsample('data_full.nc', 'data_sampled.nc', (2, 4, 4))
-    
+
     This will result in a new file 'data_sampled.nc' with the data from
     'data_full.nc' scaled by a factor of 2, 4 and 4 in the 1st, 2nd and
     3rd dimensions, respectively. 
@@ -49,20 +50,21 @@ def downsample(infn, outfn, factors):
     orig = Dataset(infn, 'r')
     new = Dataset(outfn, 'w', format='NETCDF3_CLASSIC')
 
-    new.setncatts(orig.__dict__) # copies attributes
-    
+    new.setncatts(orig.__dict__)  # copies attributes
+
     t1 = time.time()
     print('Reading in full data...')
     orig_data = orig.variables[data_str][:]
     t2 = time.time()
-    print('Done: {} seconds elapsed'.format(t2-t1))
+    print('Done: {} seconds elapsed'.format(t2 - t1))
 
     reductions = (1 / factors[0], 1 / factors[1], 1 / factors[2])
 
     print('Sampling...')
-    sampled = zoom(orig_data, reductions, order=0) # order=0 specifies nearest neighbors
+    # order=0 specifies nearest neighbors
+    sampled = zoom(orig_data, reductions, order=0)
     t3 = time.time()
-    print('Done: {} seconds elapsed'.format(t3-t2))
+    print('Done: {} seconds elapsed'.format(t3 - t2))
 
     # netCDF makes you specify variable dimensions separately...
     new.createDimension('dz', sampled.shape[0])
@@ -75,14 +77,13 @@ def downsample(infn, outfn, factors):
     new_data.setncatts(attdict)
     new_data[:] = sampled
 
-    
     print('Writing new file...')
     new.close()
     t4 = time.time()
-    print('Done: {} seconds elapsed'.format(t4-t3))
+    print('Done: {} seconds elapsed'.format(t4 - t3))
 
 
-def shift_subtract(fn, shift = (2,2)):
+def shift_subtract(fn, shift=(2, 2)):
     '''
     This function opens a TIF file, creates a copy shifted by a specified number of pixels,
     subtracts the original image from the shifted image and returns the subtraction
