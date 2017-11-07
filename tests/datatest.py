@@ -98,12 +98,12 @@ def forwardmodel(metal=Os, spect=Al, H2O=H2O):
     Im_trans = np.array([E[i] * spect.I0_int[i] * T_E[:, :, i]
                          for i in range(E.size)]).sum(axis=0)
 
-    Im_phase = np.array([E[i] * spect.I0_int[i] *
-                         (1 + R2 / spect.K_int[i] *
-                          lap_phi_E[:, :, i]) for i in range(E.size)]).sum(axis=0)
+    # Im_phase = np.array([E[i] * spect.I0_int[i] *
+    #                      (1 + R2 / spect.K_int[i] *
+    #                       lap_phi_E[:, :, i]) for i in range(E.size)]).sum(axis=0)
 
-    ph_factor = np.array([(1 + R2 / spect.K_int[i] * lap_phi_E[:, :, i])
-                          for i in range(E.size)])
+    # ph_factor = np.array([(1 + R2 / spect.K_int[i] * lap_phi_E[:, :, i])
+    #                       for i in range(E.size)])
 
     return Im_full, Im_trans
 
@@ -186,11 +186,11 @@ for metal in [Os, U]:
 
     print('{}:'.format(nmet))
 
-    imAl, imAlT, imAlPh = forwardmodel(metal, Al)
-    imTi, imTiT, imTiPh = forwardmodel(metal, Ti)
+    imAl, imAlT = forwardmodel(metal, Al)
+    imTi, imTiT = forwardmodel(metal, Ti)
 
-    print('Saving phase histogram...')
-    saveresults((imAlPh - imTiPh) / imAlPh * 100, '{}/{}_full_vs_ph')
+    # print('Saving phase histogram...')
+    # saveresults((imAlPh - imTiPh) / imAlPh * 100, '{}/{}_full_vs_ph')
 
     print('Saving histograms...')
     saveresults((imAl - imAlT) / imAl * 100,
