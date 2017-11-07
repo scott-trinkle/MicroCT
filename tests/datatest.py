@@ -38,18 +38,20 @@ Os.ndens = 22.59 * Na / Os.A * width
 U.ndens = 19.1 * Na / U.A * width
 
 # Reading in image files to calculate "Laplacian Spectrums"
-Al_phant = TIFF.open('../Data/Projection_Tifs/Al_1080.tif', 'r').read_image()
-No_phant = TIFF.open('../Data/Projection_Tifs/No_1080.tif', 'r').read_image()
+# Al_phant = TIFF.open('../Data/Projection_Tifs/Al_1080.tif', 'r').read_image()
+# No_phant = TIFF.open('../Data/Projection_Tifs/No_1080.tif', 'r').read_image()
 
-Al_phant = zoom(Al_phant, (1 / 10, 1 / 10), order=0)
-No_phant = zoom(No_phant, (1 / 10, 1 / 10), order=0)
+# Al_phant = zoom(Al_phant, (1 / 10, 1 / 10), order=0)
+# No_phant = zoom(No_phant, (1 / 10, 1 / 10), order=0)
+
+Al_phant = np.load('../Data/Phantoms/h20.npy')
+No_phant = np.load('../Data/Phantoms/metal.npy')
 
 H2O.phant = Al_phant / Al_phant.mean() * H2O.ndens
 Os.phant = No_phant / No_phant.mean() * Os.ndens
 U.phant = No_phant / No_phant.mean() * U.ndens
 
-print('')
-print('Calculating laplacians:')
+print('\nCalculating laplacians:')
 print('H2O...')
 H2O.lap = laplace(H2O.phant)
 print('Os...')
@@ -59,10 +61,33 @@ U.lap = laplace(U.phant)
 
 
 def forwardmodel(metal=Os, spect=Al, H2O=H2O):
+    '''
+    Matches all array sizes, calculates laplacian of phi and transmission factor, 
+    Integrates over energy to calculate the full measured intensity, Im_full
+    and the transmission-only intensity Im_trans
+    '''
+
+    if metal is Os:
+        nmet = 'Os'
+    elif metal is U:
+        nmet = 'U'
+    if spect is Al:
+        nspect = 'Al'
+    elif spect is Ti:
+        nspect = 'Ti'
+
     E, H2O, spect, metal = match_arrays(H2O, spect, metal)
 
     print('Calculating lap_phi_E...')
     lap_phi_E = calc_lap_phi(spect, H2O, metal)
+
+    # plt.close()
+    # plt.hist(lap_phi_E.flatten(), bins=500)
+    # plt.xlabel(r'$\nabla^2 \phi(E)$')
+    # plt.title('Spectrum: {}\n Metal: {}'.format(nspect, nmet))
+    # plt.savefig(
+    #     '../Data/Spectra/data_plots/lap_{}_{}.png'.format(nspect, nmet), dpi=400)
+
     print('Calculating T_E...')
     T_E = calc_T(spect, H2O, metal)
 
@@ -73,19 +98,86 @@ def forwardmodel(metal=Os, spect=Al, H2O=H2O):
     Im_trans = np.array([E[i] * spect.I0_int[i] * T_E[:, :, i]
                          for i in range(E.size)]).sum(axis=0)
 
+    Im_phase = np.array([E[i] * spect.I0_int[i] *
+                         (1 + R2 / spect.K_int[i] *
+                          lap_phi_E[:, :, i]) for i in range(E.size)]).sum(axis=0)
+
+    ph_factor = np.array([(1 + R2 / spect.K_int[i] * lap_phi_E[:, :, i])
+                          for i in range(E.size)])
+
     return Im_full, Im_trans
 
 
 def saveresults(result, fn):
+    '''
+    Saves a histogram of the results
+    '''
     plt.close()
     plt.hist(result.flatten(), bins=500)
-    plt.title(fn)
-    plt.xlabel('Percent Difference')
-    plt.savefig('../Data/Spectra/Results/' + fn + '.png', dpi=400)
-    plt.close()
+    if fn is not None:
+        plt.title(fn)
+        plt.xlabel('Percent Difference')
+        plt.savefig('../Data/Spectra/Results/new_phant/' +
+                    fn + '.png', dpi=400)
+        plt.close()
+    else:
+        plt.show()
+
+#                                 LAPLACIAN of n_{a,i} PLOT
+
+
+# fig, axes = plt.subplots(3, 1, sharex=True, figsize=(10, 8))
+
+# axes[0].hist(H2O.lap.flatten(), bins=500, label='H2O')
+# axes[0].legend()
+
+
+# axes[1].hist(Os.lap.flatten(), bins=500, label='Os')
+# axes[1].legend()
+
+
+# axes[2].hist(U.lap.flatten(), bins=500, label='U')
+# axes[2].legend()
+
+# fig.suptitle(r'$\nabla^2 \int n_{a,i}(\vec{x}) dl$')
+
+# plt.savefig('../Data/Spectra/data_plots/laplacians.png', dpi=400)
+
+
+#                               F1 AND F2 PLOT
+
+# plt.close()
+# axf1 = plt.subplot(2, 1, 1)
+# axf2 = plt.subplot(2, 1, 2)
+# labels = ['H2O', 'Os', 'U']
+
+# for i, mat in enumerate([H2O, Os, U]):
+#     axf1.plot(mat.E, mat.f1, label=labels[i])
+#     axf1.legend()
+#     axf2.plot(mat.E, mat.f2, label=labels[i])
+#     axf2.legend()
+
+# axf1.set_title('f1 vs. E')
+# axf1.set_xlabel('E [keV]')
+# axf1.set_ylabel('f1')
+# axf2.set_title('f2 vs. E')
+# axf2.set_xlabel('E [keV]')
+# axf2.set_ylabel('f2')
+# plt.tight_layout()
+
+# plt.savefig('../Data/Spectra/f1_f2.png', dpi=400, bbox_inches='tight')
+
+
+#                        Subtraction histogram plots
 
 
 for metal in [Os, U]:
+    '''
+    For each metal, saves histogram of the percent difference between the full-
+    and transmission-only measured intensities for each filter, as well as the
+    percent difference in full- and transmission-only subtractions between the
+    two filters. Also saves .png file of full subtraction
+    '''
 
     if metal is Os:
         nmet = 'Os'
@@ -94,8 +186,11 @@ for metal in [Os, U]:
 
     print('{}:'.format(nmet))
 
-    imAl, imAlT = forwardmodel(metal, Al)
-    imTi, imTiT = forwardmodel(metal, Ti)
+    imAl, imAlT, imAlPh = forwardmodel(metal, Al)
+    imTi, imTiT, imTiPh = forwardmodel(metal, Ti)
+
+    print('Saving phase histogram...')
+    saveresults((imAlPh - imTiPh) / imAlPh * 100, '{}/{}_full_vs_ph')
 
     print('Saving histograms...')
     saveresults((imAl - imAlT) / imAl * 100,
