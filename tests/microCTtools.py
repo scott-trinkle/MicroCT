@@ -134,7 +134,7 @@ def get_slices(fn, n):
         Contains the n slices of the volume
     '''
 
-    volume = nc.Dataset(fn, 'r').variables['VOLUME'][:]
+    volume = Dataset(fn, 'r').variables['VOLUME'][:]
     dz = volume.shape[0]
     slices = volume[0:dz:dz // 5]
     return slices

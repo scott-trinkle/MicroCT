@@ -1,126 +1,117 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from glob import glob
-from scipy import interpolate
-from scipy.ndimage.filters import laplace
+from phasefunctions import Material, Spectrum, laplace_spectrum, match_arrays, calc_lap_phi, calc_T
 from libtiff import TIFF
+from scipy.ndimage.filters import laplace
+from scipy.ndimage import zoom
 
-
-def read_data(fn):
-    data = np.loadtxt(fn, dtype=np.float64)
-    data = data.reshape((data.size // 2, 2))
-    return data[:, 0], data[:, 1]
-
-
-def log_interp(xx, yy, xx_new, kind='linear'):
-    # Import model input, model output, returns log interpolation function
-
-    logx = np.log10(xx)
-    logy = np.log10(yy)
-    lin_interp = interpolate.interp1d(logx, logy, kind=kind)
-
-    def log_interp(zz): return np.power(10.0, lin_interp(np.log10(zz)))
-    return log_interp(xx_new)
-
-
-class Material(object):
-
-    def __init__(self, f1fn=None, f2fn=None):
-
-        if f1fn is not None:
-            self.E1, self.f1 = read_data(f1fn)
-
-            if f2fn is None:
-                self.E = self.E1
-
-        if f2fn is not None:
-            self.E2, self.f2 = read_data(f2fn)
-
-            if self.E1.size > self.E2.size:
-                self.E = self.E1
-                self.f2 = log_interp(self.E2, self.f2, self.E)
-            elif self.E2.size > self.E1.size:
-                self.E = self.E2
-                self.f1 = log_interp(self.E1, self.f1, self.E)
-            elif self.E1.size == self.E2.size:
-                self.E = self.E1
-
-    def interpolate_to(self, new_E):
-        self.f1_int = log_interp(self.E, self.f1, new_E)
-        self.f2_int = log_interp(self.E, self.f2, new_E)
-        self.E_int = new_E
-
-
-class Spectrum(object):
-
-    def __init__(self, fn):
-        self.E, self.I0 = read_data(fn)
-        h = 4.1357e-18  # keV s
-        c = 299792458  # m / s
-        self.lam = h * c / self.E  # m
-
-    def interpolate_to(self, new_E):
-        self.I0_int = log_interp(self.E, self.I0, new_E)
-        self.E_int = new_E
-        h = 4.1357e-18  # keV s
-        c = 299792458  # m / s
-        self.lam_int = h * c / new_E  # m
-
-
-# get filenames of all f1, f2 and spectra data
-fns = glob('../Data/Spectra/*.txt')
 
 # Reading in energy spectra
-Al = Spectrum(fns[0])
-Ti = Spectrum(fns[9])
+Al = Spectrum('../Data/Spectra/Al_1mm_3mrad.txt')
+Ti = Spectrum('../Data/Spectra/Ti_1mm_2mrad.txt')
 
 # Reading in f1 and f2 values
-Os = Material(fns[4], fns[7])
-U = Material(fns[5], fns[8])
+Os = Material('../Data/Spectra/f1_Os.txt', '../Data/Spectra/f2_Os.txt')
+U = Material('../Data/Spectra/f1_U.txt', '../Data/Spectra/f2_U.txt')
+H2O = Material('../Data/Spectra/f1_H2O_interp.txt',
+               '../Data/Spectra/f2_H20.txt')
 
-# H20 only has f2 values
-H2O = Material(fns[2], fns[5])
+# Constants
+r_e = 2.818e-15  # m [Jacobsen, Kirz, Howells chapter]
+R2 = 0.30  # m [.setup files]
 
-r_e = 2.818e-15  # m
-R2 = 0.30  # m
-pix_size = 1.24e-6  # m
+Na = 6.02214e23  # atoms/mole, https://en.wikipedia.org/wiki/Avogadro_constant
 
-Na = 6.022e23
-Os.A = 190.23
-U.A = 238.02891
-H2O.A = 18.01528
+Os.A = 190.23  # g / mol    https://en.wikipedia.org/wiki/Osmium
+U.A = 238.02891  # g / mol  https://en.wikipedia.org/wiki/Uranium
+H2O.A = 18.01488  # g / mol https://en.wikipedia.org/wiki/Molar_mass
 
-Al_phant_tif = TIFF.open('../Data/Projection_Tifs/Al_1080.tif', 'r')
-Al_phant = Al_phant_tif.read_image()
+pix_size = 1.24e-6  # m [.setup files]
+width = 1920 * pix_size * 100  # cm
 
-'''
-NOTE
+# Calculating number densities with formular from [Jacobsen, Kirz, Howells]
+# Densities from the above cited wiki pages.
+# Note these are actually the number density LINE INTEGRALS in
+# particles / cm^2.
+H2O.ndens = 1 * Na / H2O.A * width
+Os.ndens = 22.59 * Na / Os.A * width
+U.ndens = 19.1 * Na / U.A * width
 
-GET HISTOGRAM OF LAPLACIAN OF REAL SINOGRAM IMAGE
-CONVERT INTO A "PDF" AND APPLY IT TO THE MEAN VALUE OF 
-N_{A,I} FOR EACH MATERIAL TO GET A "SPECTRUM" OF 
-LAPLACE-PHI(E) VALUES
-'''
+# Reading in image files to calculate "Laplacian Spectrums"
+Al_phant = TIFF.open('../Data/Projection_Tifs/Al_1080.tif', 'r').read_image()
+No_phant = TIFF.open('../Data/Projection_Tifs/No_1080.tif', 'r').read_image()
 
-lap = laplace(phantom)
+Al_phant = zoom(Al_phant, (1 / 10, 1 / 10), order=0)
+No_phant = zoom(No_phant, (1 / 10, 1 / 10), order=0)
 
-plt.hist(lap.flatten())
-plt.show()
+H2O.phant = Al_phant / Al_phant.mean() * H2O.ndens
+Os.phant = No_phant / No_phant.mean() * Os.ndens
+U.phant = No_phant / No_phant.mean() * U.ndens
 
-# mask_file = TIFF.open('../Data/Mask.tif', 'r')
-# mask = mask_file.read_image() // 255
+print('')
+print('Calculating laplacians:')
+print('H2O...')
+H2O.lap = laplace(H2O.phant)
+print('Os...')
+Os.lap = laplace(Os.phant)
+print('U...\n')
+U.lap = laplace(U.phant)
 
-# p_water = phantom.copy() * mask  # water
 
-# p_metal = phantom.copy()  # metal
-# p_metal[mask == 1] = 0
+def forwardmodel(metal=Os, spect=Al, H2O=H2O):
+    E, H2O, spect, metal = match_arrays(H2O, spect, metal)
+
+    print('Calculating lap_phi_E...')
+    lap_phi_E = calc_lap_phi(spect, H2O, metal)
+    print('Calculating T_E...')
+    T_E = calc_T(spect, H2O, metal)
+
+    print('Calculating Im...')
+    Im_full = np.array([E[i] * spect.I0_int[i] *
+                        T_E[:, :, i] * (1 + R2 / spect.K_int[i] *
+                                        lap_phi_E[:, :, i]) for i in range(E.size)]).sum(axis=0)
+    Im_trans = np.array([E[i] * spect.I0_int[i] * T_E[:, :, i]
+                         for i in range(E.size)]).sum(axis=0)
+
+    return Im_full, Im_trans
+
+
+def saveresults(result, fn):
+    plt.close()
+    plt.hist(result.flatten(), bins=500)
+    plt.title(fn)
+    plt.xlabel('Percent Difference')
+    plt.savefig('../Data/Spectra/Results/' + fn + '.png', dpi=400)
+    plt.close()
+
 
 for metal in [Os, U]:
-    for spect in [Al, Ti]:
 
-        E_min = np.array([mat.E.min() for mat in [metal, spect]]).max()
-        E_max = np.array([mat.E.max() for mat in [metal, spect]]).min()
-        n = np.array([mat.E.size for mat in [metal, spect]]).max()
-        E = np.linspace(E_min, E_max, n)
-        metal.interpolate_to(E)
-        spect.interpolate_to(E)
+    if metal is Os:
+        nmet = 'Os'
+    elif metal is U:
+        nmet = 'U'
+
+    print('{}:'.format(nmet))
+
+    imAl, imAlT = forwardmodel(metal, Al)
+    imTi, imTiT = forwardmodel(metal, Ti)
+
+    print('Saving histograms...')
+    saveresults((imAl - imAlT) / imAl * 100,
+                '{}/{}_full_vs_T'.format(nmet, 'Al'))
+    saveresults((imTi - imTiT) / imTi * 100,
+                '{}/{}_full_vs_T'.format(nmet, 'Ti'))
+
+    sub = imAl - imTi
+    subT = imAlT - imTiT
+
+    saveresults((sub - subT) / sub * 100, '{}/E_sub_full_vs_T'.format(nmet))
+
+    print('Saving image...\n')
+    plt.imshow(sub, cmap=plt.cm.Greys_r)
+    plt.axis('off')
+    plt.tight_layout()
+    plt.savefig('../Data/Spectra/Results/{}/sub_im.png'.format(nmet),
+                dpi=1000, bbox_inches='tight')
+    plt.close()
