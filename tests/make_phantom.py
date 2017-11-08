@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage.filters import laplace
+from libtiff import TIFF
 
 n = 512
 
@@ -47,5 +48,18 @@ metal -= metal.min()
 H2O /= H2O.mean()
 metal /= metal.mean()
 
-np.save('../Data/Phantoms/h20.npy', H2O)
-np.save('../Data/Phantoms/metal.npy', metal)
+plt.figure(1)
+plt.imshow(H2O)
+plt.axis('off')
+plt.savefig('../Data/Spectra/Results/new_phant/H2O.png',
+            dpi=400, bbox_inches='tight')
+
+plt.figure(2)
+plt.imshow(metal)
+plt.axis('off')
+plt.savefig('../Data/Spectra/Results/new_phant/metal.png',
+            dpi=400, bbox_inches='tight')
+
+
+# np.save('../Data/Phantoms/h20.npy', H2O)
+# np.save('../Data/Phantoms/metal.npy', metal)

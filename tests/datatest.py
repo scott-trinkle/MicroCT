@@ -38,14 +38,14 @@ Os.ndens = 22.59 * Na / Os.A * width
 U.ndens = 19.1 * Na / U.A * width
 
 # Reading in image files to calculate "Laplacian Spectrums"
-# Al_phant = TIFF.open('../Data/Projection_Tifs/Al_1080.tif', 'r').read_image()
-# No_phant = TIFF.open('../Data/Projection_Tifs/No_1080.tif', 'r').read_image()
+Al_phant = TIFF.open('../Data/Projection_Tifs/Al_1080.tif', 'r').read_image()
+No_phant = TIFF.open('../Data/Projection_Tifs/No_1080.tif', 'r').read_image()
 
 # Al_phant = zoom(Al_phant, (1 / 10, 1 / 10), order=0)
 # No_phant = zoom(No_phant, (1 / 10, 1 / 10), order=0)
 
-Al_phant = np.load('../Data/Phantoms/h20.npy')
-No_phant = np.load('../Data/Phantoms/metal.npy')
+# Al_phant = np.load('../Data/Phantoms/h20.npy')
+# No_phant = np.load('../Data/Phantoms/metal.npy')
 
 H2O.phant = Al_phant / Al_phant.mean() * H2O.ndens
 Os.phant = No_phant / No_phant.mean() * Os.ndens
@@ -100,7 +100,7 @@ def forwardmodel(metal=Os, spect=Al, H2O=H2O):
 
     # Im_phase = np.array([E[i] * spect.I0_int[i] *
     #                      (1 + R2 / spect.K_int[i] *
-    #                       lap_phi_E[:, :, i]) for i in range(E.size)]).sum(axis=0)
+    # lap_phi_E[:, :, i]) for i in range(E.size)]).sum(axis=0)
 
     # ph_factor = np.array([(1 + R2 / spect.K_int[i] * lap_phi_E[:, :, i])
     #                       for i in range(E.size)])
@@ -168,9 +168,8 @@ def saveresults(result, fn):
 # plt.savefig('../Data/Spectra/f1_f2.png', dpi=400, bbox_inches='tight')
 
 
+
 #                        Subtraction histogram plots
-
-
 for metal in [Os, U]:
     '''
     For each metal, saves histogram of the percent difference between the full-
@@ -186,11 +185,11 @@ for metal in [Os, U]:
 
     print('{}:'.format(nmet))
 
-    imAl, imAlT = forwardmodel(metal, Al)
-    imTi, imTiT = forwardmodel(metal, Ti)
+    imAl, imAlT, imAlPh = forwardmodel(metal, Al)
+    imTi, imTiT, imTiPh = forwardmodel(metal, Ti)
 
-    # print('Saving phase histogram...')
-    # saveresults((imAlPh - imTiPh) / imAlPh * 100, '{}/{}_full_vs_ph')
+    print('Saving phase histogram...')
+    saveresults((imAlPh - imTiPh) / imAlPh * 100, '{}/{}_full_vs_ph')
 
     print('Saving histograms...')
     saveresults((imAl - imAlT) / imAl * 100,
