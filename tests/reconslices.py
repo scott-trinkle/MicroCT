@@ -2,9 +2,14 @@ from microCTtools import get_slices
 import numpy as np
 from libtiff import TIFF
 
-fns = ['../../VS0169_Al_filterrecon.volume', '../../VS0169_No_filterrecon.volume']
+# fns = ['../../VS0169_Al_filterrecon.volume', '../../VS0169_No_filterrecon.volume']
+main = '../Data/Brain/'
+samps = ['VS0169_1712', 'VS0169_1722', 'VS0169_Os']
 
-n = 5
+
+    
+
+n = 3
 print('Reading Al slices')
 Al_slices = get_slices(fns[0], n)
 print('Reading No slices')

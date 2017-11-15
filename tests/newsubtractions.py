@@ -35,25 +35,25 @@ def subtract(fn_low, fn_high, met_name, recon, dz, n):
 
 
 # sinogram
-print('U sino')
-U_low = '../Data/Brain/VS0169_1712/VS0169_1712_.volume'
-U_high = '../Data/Brain/VS0169_1722/VS0169_1722_.volume'
-subtract(U_low, U_high, 'U', 'sino', 900, 4)
+# print('U sino')
+# U_low = '../Data/Brain/VS0169_1712/VS0169_1712_.volume'
+# U_high = '../Data/Brain/VS0169_1722/VS0169_1722_.volume'
+#subtract(U_low, U_high, 'U', 'sino', 900, 4)
 
 # recon
-print('U recon')
-U_low = '../Data/Brain/VS0169_1712/VS0169_1712_recon.volume'
-U_high = '../Data/Brain/VS0169_1722/VS0169_1722_recon.volume'
-subtract(U_low, U_high, 'U', 'recon', 1200, 4)
+# print('U recon')
+#U_low = '../Data/Brain/VS0169_1712/VS0169_1712_recon.volume'
+# U_high = '../Data/Brain/VS0169_1722/VS0169_1722_recon.volume'
+# subtract(U_low, U_high, 'U', 'recon', 1200, 4)
 
 # sinogram
 print('Os Sino')
 Os_low = '../Data/Brain/VS0169_Os/VS0169_Os_B_.volume'
-Os_high = '../Data/Brain/VS0169_Os/VS0169_Os_A_recon.volume'
+Os_high = '../Data/Brain/VS0169_Os/VS0169_Os_A_.volume'
 subtract(Os_low, Os_high, 'Os', 'sino', 900, 4)
 
 # recon
 print('Os Recon')
 Os_low = '../Data/Brain/VS0169_Os/VS0169_Os_B_recon.volume'
 Os_high = '../Data/Brain/VS0169_Os/VS0169_Os_A_recon.volume'
-subtract(Os_low, Os_high, 'Os', 'recon', 900, 4)
+subtract(Os_low, Os_high, 'Os', 'recon', 1200, 4)
