@@ -4,7 +4,7 @@ from phasefunctions import Material, Spectrum, laplace_spectrum, match_arrays, c
 from libtiff import TIFF
 from scipy.ndimage.filters import laplace
 from scipy.ndimage import zoom
-
+import time
 
 # Reading in energy spectra
 Al = Spectrum('../Data/Spectra/Al_1mm_3mrad.txt')
@@ -91,47 +91,52 @@ def forwardmodel(metal=Os, spect=Al, H2O=H2O):
     print('Calculating lap_phi_E...')
     lap_phi_E = calc_lap_phi(spect, H2O, metal)
 
+    # Save laplacian of phi histograms
+    # plt.close()
+    # plt.hist(lap_phi_E.flatten(), bins=500)
+    # plt.xlabel(r'$\nabla^2 \phi(E)$')
+    # plt.title('Spectrum: {}\n Metal: {}'.format(nspect, nmet))
+    # plt.savefig(
+    #     '../Data/Spectra/data_plots/lap_{}_{}.png'.format(nspect, nmet), dpi=400)
+
+    print('Calculating T_E...')
+    T_E = calc_T(spect, H2O, metal)
+
+    print('Integrating Im...')
+    Im_full = np.trapz(np.array([E[i] * spect.I0_int[i] *
+                                 T_E[:, :, i] * (1 + R2 / spect.K_int[i] *
+                                                 lap_phi_E[:, :, i]) for i in range(E.size)]), E, axis=0)
+
+    print('Integrating Im trans...')
+    Im_trans = np.trapz(np.array([E[i] * spect.I0_int[i] * T_E[:, :, i]
+                                  for i in range(E.size)]), E, axis=0)
+
+    # print('Calculating Im_phase...')
+    # Im_phase = np.array([E[i] * spect.I0_int[i] *
+    #                      (1 + R2 / spect.K_int[i] *
+    # lap_phi_E[:, :, i]) for i in range(E.size)]).sum(axis=0)
+
+    print('Calculating ph_factor...')
+    ph_factor = np.array([(R2 / spect.K_int[i] * lap_phi_E[:, :, i])
+                          for i in range(E.size)])
+
+    return Im_full, Im_trans, ph_factor
+
+
+def saveresults(result, fn):
+    '''
+    Saves a histogram of the results
+    '''
     plt.close()
-    plt.hist(lap_phi_E.flatten(), bins=500)
-    plt.xlabel(r'$\nabla^2 \phi(E)$')
-    plt.title('Spectrum: {}\n Metal: {}'.format(nspect, nmet))
-    plt.savefig(
-        '../Data/Spectra/data_plots/lap_{}_{}.png'.format(nspect, nmet), dpi=400)
-
-#     print('Calculating T_E...')
-#     T_E = calc_T(spect, H2O, metal)
-
-#     print('Calculating Im...')
-#     Im_full = np.array([E[i] * spect.I0_int[i] *
-#                         T_E[:, :, i] * (1 + R2 / spect.K_int[i] *
-#                                         lap_phi_E[:, :, i]) for i in range(E.size)]).sum(axis=0)
-#     Im_trans = np.array([E[i] * spect.I0_int[i] * T_E[:, :, i]
-#                          for i in range(E.size)]).sum(axis=0)
-
-#     # Im_phase = np.array([E[i] * spect.I0_int[i] *
-#     #                      (1 + R2 / spect.K_int[i] *
-#     # lap_phi_E[:, :, i]) for i in range(E.size)]).sum(axis=0)
-
-#     # ph_factor = np.array([(1 + R2 / spect.K_int[i] * lap_phi_E[:, :, i])
-#     #                       for i in range(E.size)])
-
-#     return Im_full, Im_trans
-
-
-# def saveresults(result, fn):
-#     '''
-#     Saves a histogram of the results
-#     '''
-#     plt.close()
-#     plt.hist(result.flatten(), bins=500)
-#     if fn is not None:
-#         plt.title(fn)
-#         plt.xlabel('Percent Difference')
-#         plt.savefig('../Data/Spectra/Results/new_phant/' +
-#                     fn + '.png', dpi=400)
-#         plt.close()
-#     else:
-#         plt.show()
+    plt.hist(result.flatten(), bins=500)
+    if fn is not None:
+        plt.title(fn)
+        plt.xlabel('Percent Difference')
+        plt.savefig('data/' +
+                    fn + '.png', dpi=400)
+        plt.close()
+    else:
+        plt.show()
 
 #                                 LAPLACIAN of n_{a,i} PLOT
 
@@ -178,44 +183,62 @@ def forwardmodel(metal=Os, spect=Al, H2O=H2O):
 
 # # plt.savefig('../Data/Spectra/f1_f2.png', dpi=400, bbox_inches='tight')
 
+def print_stats(a):
+    a = a.flatten()
+    print('Mean: {} \n One-sided Mean: {} \n Min: {} \n Max: {} \n'.format(a.mean(),
+                                                                           a[a > 0].mean(), a.min(), a.max()))
 
-# #                        Subtraction histogram plots
-# for metal in [Os, U]:
-#     '''
-#     For each metal, saves histogram of the percent difference between the full-
-#     and transmission-only measured intensities for each filter, as well as the
-#     percent difference in full- and transmission-only subtractions between the
-#     two filters. Also saves .png file of full subtraction
-#     '''
 
-#     if metal is Os:
-#         nmet = 'Os'
-#     elif metal is U:
-#         nmet = 'U'
+#                        Subtraction histogram plots
+for metal in [Os, U]:
+    '''
+    For each metal, saves histogram of the percent difference between the full-
+    and transmission-only measured intensities for each filter, as well as the
+    percent difference in full- and transmission-only subtractions between the
+    two filters. Also saves .png file of full subtraction
+    '''
 
-#     print('{}:'.format(nmet))
+    plt.close()
 
-#     imAl, imAlT, imAlPh = forwardmodel(metal, Al)
-#     imTi, imTiT, imTiPh = forwardmodel(metal, Ti)
+    if metal is Os:
+        nmet = 'Os'
+    elif metal is U:
+        nmet = 'U'
 
-#     print('Saving phase histogram...')
-#     saveresults((imAlPh - imTiPh) / imAlPh * 100, '{}/{}_full_vs_ph')
+    print('{}:'.format(nmet))
 
-#     print('Saving histograms...')
-#     saveresults((imAl - imAlT) / imAl * 100,
-#                 '{}/{}_full_vs_T'.format(nmet, 'Al'))
-#     saveresults((imTi - imTiT) / imTi * 100,
-#                 '{}/{}_full_vs_T'.format(nmet, 'Ti'))
+    imAl, imAlT, imAlPh = forwardmodel(metal, Al)
+    imTi, imTiT, imTiPh = forwardmodel(metal, Ti)
 
-#     sub = imAl - imTi
-#     subT = imAlT - imTiT
+    print('Saving phase histogram...\n')
+    saveresults(imAlPh, '{}/{}_phase'.format(nmet, 'Al'))
+    saveresults(imTiPh, '{}/{}_phase'.format(nmet, 'Ti'))
 
-#     saveresults((sub - subT) / sub * 100, '{}/E_sub_full_vs_T'.format(nmet))
+    print('imAlPh:')
+    print_stats(imAlPh)
+    print('imTiPh:')
+    print_stats(imTiPh)
 
-#     print('Saving image...\n')
-#     plt.imshow(sub, cmap=plt.cm.Greys_r)
-#     plt.axis('off')
-#     plt.tight_layout()
-#     plt.savefig('../Data/Spectra/Results/{}/sub_im.png'.format(nmet),
-#                 dpi=1000, bbox_inches='tight')
-#     plt.close()
+    # print('Saving histograms...')
+    # saveresults((imAl - imAlT) / imAl * 100,
+    #             '{}/{}_full_vs_T'.format(nmet, 'Al'))
+    # saveresults((imTi - imTiT) / imTi * 100,
+    #             '{}/{}_full_vs_T'.format(nmet, 'Ti'))
+
+    print('Energy subtraction histograms...')
+
+    sub = imAl - imTi
+    subT = imAlT - imTiT
+
+    E_effect = (sub - subT) / sub * 100
+
+    saveresults(E_effect, '{}/E_sub_full_vs_T'.format(nmet))
+    print_stats(E_effect)
+
+    # print('Saving image...\n')
+    # plt.imshow(sub, cmap=plt.cm.Greys_r)
+    # plt.axis('off')
+    # plt.tight_layout()
+    # plt.savefig('../Data/Spectra/Results/{}/sub_im.png'.format(nmet),
+    #             dpi=1000, bbox_inches='tight')
+    plt.close()
