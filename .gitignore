@@ -2,3 +2,5 @@
 *.out
 .DS_Store
 Reference
+Data/Brain
+Data/VS0169*
