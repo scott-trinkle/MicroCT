@@ -4,3 +4,10 @@
 Reference
 Data/Brain
 Data/VS0169*
+auto
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+
