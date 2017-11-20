@@ -10,4 +10,8 @@ auto
 *.fls
 *.log
 *.synctex.gz
-
+*#
+build
+dist
+microct.egg-info
+microct/__pycache__/__init__.cpython-35.pyc

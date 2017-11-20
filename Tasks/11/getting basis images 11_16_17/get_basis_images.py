@@ -2,15 +2,17 @@
 This script is attempting to construct U, Os and H2O basis images from the
 L-edge bracketed VSO169 images
 '''
-
+print('importing packages...')
 import numpy as np
 import matplotlib.pyplot as plt
 from libtiff import TIFF
 from scipy.interpolate import interp1d
 from microct.phasefunctions import read_data
+print('done!')
 
 # E in keV, u/p in cm^2 / g
 NIST_path = '/Users/scotttrinkle/GoogleDrive/Projects/MicroCT/Data/NIST/'
+# NIST_path = '/home/trinkle/Research/MicroCT/Data/NIST/'
 H2O_E, H2O_u = read_data(NIST_path + 'u_p_H2O.txt')
 U_E, U_u = read_data(NIST_path + 'u_p_U.txt')
 Os_E, Os_u = read_data(NIST_path + 'u_p_Os.txt')
@@ -37,6 +39,7 @@ def du(u_func, EL, EH):
 
 # Importing a single PROJECTION slice of the corrected data at all 4 energies
 tif_path = '/Users/scotttrinkle/GoogleDrive/Projects/MicroCT/Tasks/11/l-edge raw subtraction 11_15_17/new_subs/tifs/'
+# tif_path = '/home/trinkle/Research/MicroCT/Tasks/11/l-edge raw subtraction 11_15_17/new_subs/tifs/'
 G_Os_L = TIFF.open(tif_path + 'Os_low_sino_225.tif', 'r').read_image()
 G_Os_H = TIFF.open(tif_path + 'Os_high_sino_225.tif', 'r').read_image()
 G_U_L = TIFF.open(tif_path + 'U_low_sino_225.tif', 'r').read_image()
