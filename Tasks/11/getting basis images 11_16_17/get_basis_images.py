@@ -10,14 +10,17 @@ from scipy.interpolate import interp1d
 from microct.phasefunctions import read_data
 
 # E in keV, u/p in cm^2 / g
-H2O_E, H2O_u = read_data('../../Data/NIST/u_p_H2O.txt')
-U_E, U_u = read_data('../../Data/NIST/u_p_U.txt')
-Os_E, Os_u = read_data('../../Data/NIST/u_p_Os.txt')
+NIST_path = '/Users/scotttrinkle/GoogleDrive/Projects/MicroCT/Data/NIST/'
+H2O_E, H2O_u = read_data(NIST_path + 'u_p_H2O.txt')
+U_E, U_u = read_data(NIST_path + 'u_p_U.txt')
+Os_E, Os_u = read_data(NIST_path + 'u_p_Os.txt')
 
+# Returns callable linear-interpolated functions for u/p of the materials
 U = interp1d(U_E, U_u, kind='linear')
 Os = interp1d(Os_E, Os_u, kind='linear')
 H2O = interp1d(H2O_E, H2O_u, kind='linear')
 
+# Acquisition energies
 EOsL = 10.82
 EOsH = 10.92
 EUL = 17.12
@@ -25,18 +28,22 @@ EUH = 17.22
 
 
 def du(u_func, EL, EH):
+    '''
+    Returns the difference in u/p between two energies
+    '''
+
     return u_func(EH) - u_func(EL)
 
 
-G_1 = TIFF.open(
-    '../L_edge_raw_subtraction_VS0169_11_15_2017/new_subs/tifs/Os_low_sino_225.tif', 'r').read_image()
-G_2 = TIFF.open(
-    '../L_edge_raw_subtraction_VS0169_11_15_2017/new_subs/tifs/Os_high_sino_225.tif', 'r').read_image()
-G_3 = TIFF.open(
-    '../L_edge_raw_subtraction_VS0169_11_15_2017/new_subs/tifs/U_low_sino_225.tif', 'r').read_image()
-G_4 = TIFF.open(
-    '../L_edge_raw_subtraction_VS0169_11_15_2017/new_subs/tifs/U_high_sino_225.tif', 'r').read_image()
+# Importing a single PROJECTION slice of the corrected data at all 4 energies
+tif_path = '/Users/scotttrinkle/GoogleDrive/Projects/MicroCT/Tasks/11/l-edge raw subtraction 11_15_17/new_subs/tifs/'
+G_Os_L = TIFF.open(tif_path + 'Os_low_sino_225.tif', 'r').read_image()
+G_Os_H = TIFF.open(tif_path + 'Os_high_sino_225.tif', 'r').read_image()
+G_U_L = TIFF.open(tif_path + 'U_low_sino_225.tif', 'r').read_image()
+G_U_H = TIFF.open(tif_path + 'U_high_sino_225.tif', 'r').read_image()
 
+# ASSUMING HERE THAT IMGAES ARE THE SAME SIZE
+rows, cols = G_Os_L.shape
 
 '''
 Four methods:
@@ -46,34 +53,59 @@ Four methods:
 (4) 4x3 all three
 '''
 
-# Metal and "other"
+# (1) Metal and "other"
 
 
-def other(g_H, g_L, du):
+def other_subtract(g_H, g_L, du):
+    '''
+    Based on decomposition of sample into a given metal and "other"
+    Assumes that du for the "other" material is negligible
+    '''
     return (g_H - g_L) / du
 
 
-aU_o = other(G_3, G_4, du(U, EUL, EUH))
-aOs_o = other(G_2, G_1, du(Os, EOsL, EOsH))
+# Returns "basis images" based on metal and "other" decomposition
+aU_o = other_subtract(G_U_H, G_U_L, du(U, EUL, EUH))
+aOs_o = other_subtract(G_Os_H, G_Os_L, du(Os, EOsL, EOsH))
 
 
-# Metal and "water"
+# (2) 2x2 Metal and "water"
 
 
-def twobytwo(imL, imH, u1, u2, EH, EL):
-    U_mat_inv = np.linalg.inv(np.array([[u1(EH), u2(EH)],
-                                        [u1(EL), u2(EL)]]))
-    rows, cols = imL.shape
-    A = np.zeros((2, rows, cols))
-    for row in np.arange(rows):
-        for col in np.arange(cols):
-            g = np.array([imH[row, col], imL[row, col]])
-            a = np.matmul(U_mat_inv, g)
-            A[:, row, col] = a
-    return A[0]
+def twobytwo(g_L, g_H, u1, u2, EL, EH):
+    '''
+    g_L, g_H: low and high energy images
+    u1, u2: callable u/p functions for materials 1 and 2
+    EL, EH: low and high energies
 
 
-print('Calculating Os and water...')
-aOs_wat = twobytwo(G_1, G_2, Os, H2O, EOsL, EOsH)
-print('Calculating U and water...')
-aU_wat = twobytwo(G_3, G_4, U, H2O, EUL, EUH)
+    '''
+
+    # Inverse of u/p matrix
+    U_mat_inv = np.linalg.inv(np.array([[u1(EL), u2(EL)],
+                                        [u1(EH), u2(EH)]]))
+
+    g = np.array([g_L, g_H])
+    a = np.matmul(U_mat_inv, g)  # a[0] = u1, a[1] = u2
+    return a[0], a[1]
+
+
+x, y = 500, 500
+
+print('Calculating Os, U and water for both...')
+
+aOs_wat, aOs_Os = np.zeros((rows, cols)), np.zeros((rows, cols))
+aU_wat, aU_U = np.zeros((rows, cols)), np.zeros((rows, cols))
+
+time_count = 0
+
+for row in range(rows):
+    if row / rows * 100 % 10 == 0:
+        time_count += 1
+        print('{}% done...'.format(round(time_count / 10 * 100, 2)))
+    for col in range(cols):
+        aOs_wat[row, col], aOs_Os[row, col] = twobytwo(
+            G_Os_L[row, col], G_Os_H[row, col], Os, H2O, EOsL, EOsH)
+
+        aU_wat[row, col], aU_U[row, col] = twobytwo(
+            G_U_L[row, col], G_U_H[row, col], U, H2O, EUL, EUH)
