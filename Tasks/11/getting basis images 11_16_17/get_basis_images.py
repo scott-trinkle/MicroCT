@@ -90,8 +90,6 @@ def twobytwo(g_L, g_H, u1, u2, EL, EH):
     return a[0], a[1]
 
 
-x, y = 500, 500
-
 print('Calculating Os, U and water for both...')
 
 aOs_wat, aOs_Os = np.zeros((rows, cols)), np.zeros((rows, cols))
@@ -105,7 +103,28 @@ for row in range(rows):
         print('{}% done...'.format(round(time_count / 10 * 100, 2)))
     for col in range(cols):
         aOs_wat[row, col], aOs_Os[row, col] = twobytwo(
-            G_Os_L[row, col], G_Os_H[row, col], Os, H2O, EOsL, EOsH)
+            G_Os_L[row, col], G_Os_H[row, col], H2O, Os, EOsL, EOsH)
 
         aU_wat[row, col], aU_U[row, col] = twobytwo(
-            G_U_L[row, col], G_U_H[row, col], U, H2O, EUL, EUH)
+            G_U_L[row, col], G_U_H[row, col], H2O, U, EUL, EUH)
+
+
+# (3) 2x2 Metal and Metal
+
+print('\nCalculating Os, U and for both...')
+
+aOs_Os, aOs_U = np.zeros((rows, cols)), np.zeros((rows, cols))
+aU_Os, aU_U = np.zeros((rows, cols)), np.zeros((rows, cols))
+
+time_count = 0
+
+for row in range(rows):
+    if row / rows * 100 % 10 == 0:
+        time_count += 1
+        print('{}% done...'.format(round(time_count / 10 * 100, 2)))
+    for col in range(cols):
+        aOs_Os[row, col], aOs_U[row, col] = twobytwo(
+            G_Os_L[row, col], G_Os_H[row, col], Os, U, EOsL, EOsH)
+
+        aU_Os[row, col], aU_U[row, col] = twobytwo(
+            G_U_L[row, col], G_U_H[row, col], Os, U, EUL, EUH)
