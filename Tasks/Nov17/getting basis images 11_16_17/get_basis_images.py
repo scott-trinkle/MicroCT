@@ -28,7 +28,7 @@ def get_basis(g_H, g_L, du):
     return basis
 
 
-def make_G(slicenum, imtype='sino', path='/Users/scotttrinkle/GoogleDrive/Projects/MicroCT/Tasks/Nov17/l-edge raw subtraction 11_15_17/new_subs/tifs/'):
+def make_G(slicenum, imtype='sino', path='../l-edge raw subtraction 11_15_17/new_subs/tifs/'):
     '''
     Imports and returns four tiff images corresponding to 4 different
     monochromatic acquisition energies.
@@ -57,18 +57,17 @@ def make_G(slicenum, imtype='sino', path='/Users/scotttrinkle/GoogleDrive/Projec
     return G_Os_L, G_Os_H, G_U_L, G_U_H
 
 
-def save_basis(slicenum, imtype):
+def save_basis(slicenum, imtype, savepath='results/tifs/'):
     osL, osH, uL, uH = make_G(slicenum, imtype=imtype)
 
     u_basis = get_basis(uH, uL, du(U, EUL, EUH))
-    u_tiff = TIFF.open(
-        '../getting basis images 11_16_17/results/tifs/u_{}_{}.tif'.format(imtype, slicenum), 'w')
+    u_tiff = TIFF.open(savepath + 'u_{}_{}.tif'.format(imtype, slicenum), 'w')
     u_tiff.write_image(u_basis.astype(np.float32))
     u_tiff.close()
 
     os_basis = get_basis(osH, osL, du(Os, EOsL, EOsH))
     os_tiff = TIFF.open(
-        '../getting basis images 11_16_17/results/tifs/os_{}_{}.tif'.format(imtype, slicenum), 'w')
+        savepath + 'os_{}_{}.tif'.format(imtype, slicenum), 'w')
     os_tiff.write_image(os_basis.astype(np.float32))
     os_tiff.close()
 
@@ -77,7 +76,7 @@ def save_basis(slicenum, imtype):
 
 
 # E in keV, u/p in cm^2 / g
-NIST_path = "/Users/scotttrinkle/GoogleDrive/Projects/MicroCT/Data/NIST/"
+NIST_path = "../../../Data/NIST/"
 H2O_E, H2O_u = read_data(NIST_path + 'u_p_H2O.txt')
 U_E, U_u = read_data(NIST_path + 'u_p_U.txt')
 Os_E, Os_u = read_data(NIST_path + 'u_p_Os.txt')
@@ -87,17 +86,14 @@ U = interp1d(U_E, U_u, kind='linear')
 Os = interp1d(Os_E, Os_u, kind='linear')
 H2O = interp1d(H2O_E, H2O_u, kind='linear')
 
-
-U_p = 19.1
-Os_p = 22.59
-
+# U_p = 19.1
+# Os_p = 22.59
 
 # # Acquisition energies
 EOsL = 10.82
 EOsH = 10.92
 EUL = 17.12
 EUH = 17.22
-
 
 for recon_num, sino_num in zip([0, 300, 600, 900], [0, 225, 450, 675]):
     print('Saving Recons - {}\n Sino - {}\n'.format(recon_num, sino_num))

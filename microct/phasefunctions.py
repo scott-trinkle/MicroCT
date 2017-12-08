@@ -23,7 +23,7 @@ class Material(object):
 
     def __init__(self, f1fn=None, f2fn=None):
         '''
-        Reads in f1 and f2 data. If array sizes are different, interpolates
+        Reads in f1 and f2 data. If array sizes are different, log-interpolates
         smaller array to the larger array, so that both can be called with the
         same energy array "E"
         '''
@@ -73,6 +73,10 @@ class Spectrum(object):
         self.K = 2 * np.pi / self.lam  # 1 / m
 
     def interpolate_to(self, new_E):
+        '''
+        Creates new interpolated I0, E, lam and K values for a new E vector
+        new_E
+        '''
         self.I0_int = log_interp(self.E, self.I0, new_E)
         self.E_int = new_E
         h = 4.135667662e-18  # keV s
@@ -82,8 +86,10 @@ class Spectrum(object):
 
 
 def read_data(fn):
-    # Reads .txt filename, exports first (energy) and second (f1, etc)
-    # columns as two numpy arrays
+    '''
+    Reads .txt filename, exports first (energy) and second (f1, etc)
+    columns as two numpy arrays
+    '''
 
     data = np.loadtxt(fn, dtype=np.float64)
     data = data.reshape((data.size // 2, 2))
@@ -91,8 +97,10 @@ def read_data(fn):
 
 
 def log_interp(xx, yy, xx_new, kind='linear'):
-    # Import model input, model output, new input, returns log-interpolated
-    # output
+    '''
+    Import model input, model output, new input, returns log-interpolated
+    output
+    '''
 
     logx = np.log10(xx)
     logy = np.log10(yy)
@@ -118,11 +126,14 @@ def make_H2O_f1():
 
 
 def match_arrays(H2O, spect, metal):
-    # Generates a common E vector for a given spectrum, metal and water.
+    '''
+    Generates a common E vector for a given spectrum, metal and water.
 
-    # Finds the largest "minimum" energy and smallest "maximum" energy
-    # for all materials, since you cannot interpolate outside of the
-    # given data range.
+    Finds the largest "minimum" energy and smallest "maximum" energy
+    for all materials, since you cannot interpolate outside of the
+    given data range.
+    '''
+
     E_min = np.array([mat.E.min() for mat in [H2O, metal, spect]]).max()
     E_max = np.array([mat.E.max() for mat in [H2O, metal, spect]]).min()
 
@@ -137,14 +148,19 @@ def match_arrays(H2O, spect, metal):
 
 
 def laplace_spectrum(im, material, nbins):
-    # Takes an image array, Material object and number of bins, and returns
-    # lap_spec: an array of values for the laplacian of the number density
-    # projection for that material and p: the "probability density" corresponding
-    # to these values.
+    '''
+    CURRENTLY UNUSED
 
-    # input is laplacian of a real microCT projection image, normalized by the
-    # mean value of that image, and multiplied by the specified number density
-    # projection value.
+    Takes an image array, Material object and number of bins, and returns
+    lap_spec: an array of values for the laplacian of the number density
+    projection for that material and p: the "probability density" corresponding
+    to these values.
+
+    Input is laplacian of a real microCT projection image, normalized by the
+    mean value of that image, and multiplied by the specified number density
+    projection value.
+    '''
+
     p, bins = np.histogram(
         laplace(im / im.mean() * material.ndens), bins=nbins, density=True)
 
@@ -156,6 +172,12 @@ def laplace_spectrum(im, material, nbins):
 
 
 def calc_lap_phi(spect, H2O, metal):
+    '''
+    Calculates the laplacian of phi, the accumulated phase, given an 
+    energy spectrum object and a metal. Assumes that the laplacian image is
+    already assigned for the given metal. 
+    '''
+
     r_e = 2.818e-15  # m [Jacobsen, Kirz, Howells chapter]
 
     rows, cols = H2O.phant.shape
@@ -171,6 +193,10 @@ def calc_lap_phi(spect, H2O, metal):
 
 
 def calc_T(spect, H2O, metal):
+    '''
+    Calculates the transmission factor, given an energy spectrum and metal
+    objects. Assumes phantom image has been assigned. 
+    '''
     r_e = 2.818e-15  # m [Jacobsen, Kirz, Howells chapter]
 
     rows, cols = H2O.phant.shape

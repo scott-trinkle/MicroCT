@@ -5,15 +5,17 @@ from libtiff import TIFF
 from scipy.ndimage.filters import laplace
 from scipy.ndimage import zoom
 
+specpath = '../../../Data/Spectra/'
+nistpath = '../../../Data/NIST/'
+
 # Reading in energy spectra
-Al = Spectrum('../Data/Spectra/Al_1mm_3mrad.txt')
-Ti = Spectrum('../Data/Spectra/Ti_1mm_2mrad.txt')
+Al = Spectrum(specpath + 'Al_1mm_3mrad.txt')
+Ti = Spectrum(specpath + 'Ti_1mm_2mrad.txt')
 
 # Reading in f1 and f2 values
-Os = Material('../Data/Spectra/f1_Os.txt', '../Data/Spectra/f2_Os.txt')
-U = Material('../Data/Spectra/f1_U.txt', '../Data/Spectra/f2_U.txt')
-H2O = Material('../Data/Spectra/f1_H2O_interp.txt',
-               '../Data/Spectra/f2_H20.txt')
+Os = Material(nistpath + 'f1_Os.txt', nistpath + 'f2_Os.txt')
+U = Material(nistpath + 'f1_U.txt', nistpath + 'f2_U.txt')
+H2O = Material(nistpath + 'f1_H2O_interp.txt', nistpath + 'f2_H20.txt')
 
 # Constants
 r_e = 2.818e-15  # m [Jacobsen, Kirz, Howells chapter]
