@@ -125,7 +125,8 @@ def make_H2O_f1():
     return
 
 
-def match_arrays(H2O, spect, metal):
+# def match_arrays(H2O, spect, metal):
+def match_arrays(spect, Os, U):
     '''
     Generates a common E vector for a given spectrum, metal and water.
 
@@ -134,17 +135,19 @@ def match_arrays(H2O, spect, metal):
     given data range.
     '''
 
-    E_min = np.array([mat.E.min() for mat in [H2O, metal, spect]]).max()
-    E_max = np.array([mat.E.max() for mat in [H2O, metal, spect]]).min()
+    # E_min = np.array([mat.E.min() for mat in [H2O, metal, spect]]).max()
+    # E_max = np.array([mat.E.max() for mat in [H2O, metal, spect]]).min()
+    E_min = np.array([mat.E.min() for mat in [Os, U, spect]]).max()
+    E_max = np.array([mat.E.max() for mat in [Os, U, spect]]).min()
 
     # Also finding the biggest "n" so that we don't lose any sharp detail
-    n = np.array([mat.E.size for mat in [H2O, metal, spect]]).max()
+    n = np.array([mat.E.size for mat in [Os, U, spect]]).max()
     E = np.logspace(np.log10(E_min), np.log10(E_max), n)
 
-    metal.interpolate_to(E)
+    Os.interpolate_to(E)
+    U.interpolate_to(E)
     spect.interpolate_to(E)
-    H2O.interpolate_to(E)
-    return E, H2O, spect, metal
+    return E, spect, Os, U
 
 
 def laplace_spectrum(im, material, nbins):
@@ -171,7 +174,7 @@ def laplace_spectrum(im, material, nbins):
     return lap_spec, p
 
 
-def calc_lap_phi(spect, H2O, metal):
+def calc_lap_phi(spect, Os, U):
     '''
     Calculates the laplacian of phi, the accumulated phase, given an 
     energy spectrum object and a metal. Assumes that the laplacian image is
@@ -180,32 +183,32 @@ def calc_lap_phi(spect, H2O, metal):
 
     r_e = 2.818e-15  # m [Jacobsen, Kirz, Howells chapter]
 
-    rows, cols = H2O.phant.shape
-    ebins = H2O.f1_int.size
+    rows, cols = Os.phant.shape
+    ebins = Os.f1_int.size
 
     lap_phi = np.zeros((rows, cols, ebins))
     for i in range(rows):
         for j in range(cols):
             lap_phi[i, j, :] = r_e * spect.lam_int * \
-                (H2O.f1_int * H2O.lap[i, j] + metal.f1_int * metal.lap[i, j])
+                (Os.f1_int * Os.lap[i, j] + U.f1_int * U.lap[i, j])
 
     return lap_phi
 
 
-def calc_T(spect, H2O, metal):
+def calc_T(spect, Os, U):
     '''
     Calculates the transmission factor, given an energy spectrum and metal
     objects. Assumes phantom image has been assigned. 
     '''
     r_e = 2.818e-15  # m [Jacobsen, Kirz, Howells chapter]
 
-    rows, cols = H2O.phant.shape
-    ebins = H2O.f1_int.size
+    rows, cols = Os.phant.shape
+    ebins = Os.f1_int.size
 
     T = np.zeros((rows, cols, ebins))
     for i in range(rows):
         for j in range(cols):
             T[i, j, :] = np.exp(-2 * r_e * spect.lam_int *
-                                (H2O.f2_int * H2O.phant[i, j] +
-                                 metal.f2_int * metal.phant[i, j]))
+                                (Os.f2_int * Os.phant[i, j] +
+                                 U.f2_int * U.phant[i, j]))
     return T

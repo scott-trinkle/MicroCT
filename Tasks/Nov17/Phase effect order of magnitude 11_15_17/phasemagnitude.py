@@ -15,7 +15,7 @@ Ti = Spectrum(specpath + 'Ti_1mm_2mrad.txt')
 # Reading in f1 and f2 values
 Os = Material(nistpath + 'f1_Os.txt', nistpath + 'f2_Os.txt')
 U = Material(nistpath + 'f1_U.txt', nistpath + 'f2_U.txt')
-H2O = Material(nistpath + 'f1_H2O_interp.txt', nistpath + 'f2_H20.txt')
+# H2O = Material(nistpath + 'f1_H2O_interp.txt', nistpath + 'f2_H20.txt')
 
 # Constants
 r_e = 2.818e-15  # m [Jacobsen, Kirz, Howells chapter]
@@ -25,7 +25,7 @@ Na = 6.02214e23  # atoms/mole, https: // en.wikipedia.org / wiki / Avogadro_cons
 
 Os.A = 190.23  # g / mol    https://en.wikipedia.org/wiki/Osmium
 U.A = 238.02891  # g / mol  https://en.wikipedia.org/wiki/Uranium
-H2O.A = 18.01488  # g / mol https://en.wikipedia.org/wiki/Molar_mass
+# H2O.A = 18.01488  # g / mol https://en.wikipedia.org/wiki/Molar_mass
 
 pix_size = 1.24e-6  # m [.setup files]
 width = 1920 * pix_size  # m
@@ -34,7 +34,8 @@ width = 1920 * pix_size  # m
 # Densities from the above cited wiki pages.
 # Note these are actually the number density LINE INTEGRALS in
 # particles / cm^2.
-H2O.ndens = 1 * Na / H2O.A * width * 100e3  # particles / m^2
+
+# H2O.ndens = 1 * Na / H2O.A * width * 100e3  # particles / m^2
 Os.ndens = 22.59 * Na / Os.A * width * 100e3  # particles / m^2
 U.ndens = 19.1 * Na / U.A * width * 100e3  # particles / m^2
 
@@ -45,46 +46,45 @@ No_phant = TIFF.open('../Data/Projection_Tifs/No_1080.tif', 'r').read_image()
 # Al_phant = zoom(Al_phant, (1 / 10, 1 / 10), order=0)
 # No_phant = zoom(No_phant, (1 / 10, 1 / 10), order=0)
 
-H2O.phant = Al_phant / Al_phant.mean() * H2O.ndens
+# H2O.phant = Al_phant / Al_phant.mean() * H2O.ndens
 Os.phant = No_phant / No_phant.mean() * Os.ndens
 U.phant = No_phant / No_phant.mean() * U.ndens
 
 print('\nCalculating laplacians:')
-print('H2O...')
-H2O.lap = laplace(H2O.phant)
+# print('H2O...')
+# H2O.lap = laplace(H2O.phant)
 print('Os...')
 Os.lap = laplace(Os.phant)
 print('U...\n')
 U.lap = laplace(U.phant)
 
 
-def forwardmodel(metal=Os, spect=Al, H2O=H2O):
+# def forwardmodel(metal=Os, spect=Al, H2O=H2O):
+def forwardmodel(spect=Al, Os=Os, U=U):
     '''
     Matches all array sizes, calculates laplacian of phi and transmission factor,
     Integrates over energy to calculate the full measured intensity, Im_full
     and the transmission-only intensity Im_trans
     '''
 
-    if metal is Os:
-        nmet = 'Os'
-    elif metal is U:
-        nmet = 'U'
+    # if metal is Os:
+    #     nmet = 'Os'
+    # elif metal is U:
+    #     nmet = 'U'
     if spect is Al:
         nspect = 'Al'
     elif spect is Ti:
         nspect = 'Ti'
 
-    E, H2O, spect, metal = match_arrays(H2O, spect, metal)
+    E, spect, Os, U = match_arrays(spect, Os, U)
 
     print('Calculating lap_phi_E...')
-    lap_phi_E = calc_lap_phi(spect, H2O, metal)
+    lap_phi_E = calc_lap_phi(spect, Os, U)
 
     print('Calculating T_E...')
-    T_E = calc_T(spect, H2O, metal)
-    plt.hist(T_E.flatten(), bins=100)
-    plt.show()
-
-    return T_E
+    T_E = calc_T(spect, Os, U)
+    # plt.hist(T_E.flatten(), bins=100)
+    # plt.show()
 
     print('Integrating Im...')
     Im_full = np.trapz(np.array([E[i] * spect.I0_int[i] *
