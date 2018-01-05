@@ -10,19 +10,8 @@ auto
 *.log
 *.synctex.gz
 *#
-build
-dist
-microct.egg-info
 __pycache__
 cythontests
 notes
 *8bit*
 recon_8x_crop*
-Tasks/Nov17/registration_mri_xray 11_28_17/XRAY_MRI_DATA/MRI_big.nii
-Tasks/Nov17/registration_mri_xray 11_28_17/XRAY_MRI_DATA/resampleMRI.sh
-Tasks/Nov17/registration_mri_xray 11_28_17/antsBigTransform1129/
-Tasks/Nov17/registration_mri_xray 11_28_17/full_size_registration/
-Tasks/Nov17/registration_mri_xray 11_28_17/fully_upsampled/
-Tasks/Nov17/registration_mri_xray 11_28_17/noDSdeformablesyn/
-Tasks/Nov17/registration_mri_xray 11_28_17/small_warp_full_images/
-
