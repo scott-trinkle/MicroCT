@@ -125,7 +125,6 @@ def make_H2O_f1():
     return
 
 
-# def match_arrays(H2O, spect, metal):
 def match_arrays(spect, Os, U):
     '''
     Generates a common E vector for a given spectrum, metal and water.
@@ -135,8 +134,6 @@ def match_arrays(spect, Os, U):
     given data range.
     '''
 
-    # E_min = np.array([mat.E.min() for mat in [H2O, metal, spect]]).max()
-    # E_max = np.array([mat.E.max() for mat in [H2O, metal, spect]]).min()
     E_min = np.array([mat.E.min() for mat in [Os, U, spect]]).max()
     E_max = np.array([mat.E.max() for mat in [Os, U, spect]]).min()
 
@@ -176,21 +173,22 @@ def laplace_spectrum(im, material, nbins):
 
 def calc_lap_phi(spect, Os, U):
     '''
-    Calculates the laplacian of phi, the accumulated phase, given an 
+    Calculates the laplacian of phi, the accumulated phase, given an
     energy spectrum object and a metal. Assumes that the laplacian image is
-    already assigned for the given metal. 
+    already assigned for the given metal.
     '''
 
     r_e = 2.818e-15  # m [Jacobsen, Kirz, Howells chapter]
-
-    rows, cols = Os.phant.shape
     ebins = Os.f1_int.size
 
-    lap_phi = np.zeros((rows, cols, ebins))
-    for i in range(rows):
-        for j in range(cols):
-            lap_phi[i, j, :] = r_e * spect.lam_int * \
-                (Os.f1_int * Os.lap[i, j] + U.f1_int * U.lap[i, j])
+    # Reformatting data to avoid nested for loops
+    lam = spect.lam_int.reshape((ebins, 1, 1))
+    Osf1 = Os.f1_int.reshape((ebins, 1, 1))
+    Uf1 = U.f1_int.reshape((ebins, 1, 1))
+    Oslap = np.tile(Os.lap, (ebins, 1, 1))
+    Ulap = np.tile(U.lap, (ebins, 1, 1))
+
+    lap_phi = r_e * lam * (Osf1 * Oslap + Uf1 * Ulap)
 
     return lap_phi
 
@@ -198,17 +196,18 @@ def calc_lap_phi(spect, Os, U):
 def calc_T(spect, Os, U):
     '''
     Calculates the transmission factor, given an energy spectrum and metal
-    objects. Assumes phantom image has been assigned. 
+    objects. Assumes phantom image has been assigned.
     '''
     r_e = 2.818e-15  # m [Jacobsen, Kirz, Howells chapter]
-
-    rows, cols = Os.phant.shape
     ebins = Os.f1_int.size
 
-    T = np.zeros((rows, cols, ebins))
-    for i in range(rows):
-        for j in range(cols):
-            T[i, j, :] = np.exp(-2 * r_e * spect.lam_int *
-                                (Os.f2_int * Os.phant[i, j] +
-                                 U.f2_int * U.phant[i, j]))
+    # Reformatting data to avoid nested for loops
+    lam = spect.lam_int.reshape((ebins, 1, 1))
+    Osf2 = Os.f2_int.reshape((ebins, 1, 1))
+    Uf2 = U.f2_int.reshape((ebins, 1, 1))
+    Osn = np.tile(Os.ndens, (ebins, 1, 1))
+    Un = np.tile(U.ndens, (ebins, 1, 1))
+
+    T = np.exp(-2 * r_e * lam * (Osf2 * Osn + Uf2 * Un))
+
     return T
